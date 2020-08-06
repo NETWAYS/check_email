@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# 'python' should point to python version 2.*
 
 try:
     import sys
@@ -114,7 +115,7 @@ class ImapConnection(object):
     # TODO: regex is very expensive
     # search an alternative solution
     def parse_received(raw_email_received):
-        email_server_date_as_unix = raw_email_received
+        email_server_date_as_unix = raw_email_received.replace("\n", ' ').replace("\r", ' ')
         match = re.search(r";\s(.*)", email_server_date_as_unix)
 
         if match:
@@ -211,7 +212,8 @@ class SmtpConnection(object):
         if self.mode == 'tls':
             self.smtpcon.starttls()
 
-        self.smtpcon.login(self.user, self.password)
+        if self.user:
+            self.smtpcon.login(self.user, self.password)
 
     def send(self):
         time_send = int(time.time())
@@ -249,12 +251,12 @@ def parse_arguments():
 
     parser.add_argument('--smtp-user', '-susr',
                         help='username for SMTP (default: (env SMTP_USERNAME))',
-                        required=not os.getenv('SMTP_USERNAME'),
+                        required=False,
                         default=os.getenv('SMTP_USERNAME'))
 
     parser.add_argument('--smtp-password', '-spw',
                         help='password for SMTP (default: (env SMTP_PASSWORD))',
-                        required=not os.getenv('SMTP_PASSWORD'),
+                        required=False,
                         default=os.getenv('SMTP_PASSWORD'))
 
     parser.add_argument('--smtp-mode',

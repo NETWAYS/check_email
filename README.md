@@ -41,10 +41,12 @@ the thresholds, the plugin searches through the mailbox until the critical thres
       `--imap-password=[IMAP_PASSWORD]`<br>
       `--smtp-host=[SMTP_HOST]`<br>
       `--smtp-port=[SMTP_PORT]`<br>
-      `--smtp-user=[SMTP_USERNAME]`<br>
-      `--smtp-password=[SMTP_PASSWORD]`<br>
       `--sender=[SENDER_ADDRESS]`<br>
       `--receiver=[RECEIVER_ADDRESS]`<br>
+
+**Optional arguments:**<br>
+      `--smtp-user=[SMTP_USERNAME]`<br>
+      `--smtp-password=[SMTP_PASSWORD]`<br>
 
 **If not otherwise specified, the default values will be applied:**<br>
       `--imap-port=993`<br>
