@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 try:
     import sys
@@ -141,7 +141,7 @@ class ImapConnection(object):
             for message_id in message_data[0].split():
                 return_value, message_data = self.imapcon.fetch(
                     message_id, '(RFC822)')
-                raw_email = email.message_from_string(message_data[0][1])  # type: email.message.Message
+                raw_email = email.message_from_string(message_data[0][1].decode('utf-8'))  # type: email.message.Message
 
                 # TODO: Refactor
                 email_subject = raw_email.get('Subject')
