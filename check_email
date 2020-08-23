@@ -14,6 +14,7 @@ try:
     import email.header
     import re
     import socket
+    import traceback
 
     from email.mime.text import MIMEText
     from socket import gaierror
@@ -114,14 +115,16 @@ class ImapConnection(object):
     # TODO: regex is very expensive
     # search an alternative solution
     def parse_received(raw_email_received):
-        email_server_date_as_unix = raw_email_received
-        match = re.search(r";\s(.*)", email_server_date_as_unix)
+        email_server_date_as_unix = raw_email_received.splitlines()[-1].strip()
+        match = re.search("(.*.... ..:..:.. [+-]....).*", email_server_date_as_unix)
 
         if match:
             email_server_date_as_unix = match.group(1)
             email_server_date_as_unix = email.utils.mktime_tz(
                 email.utils.parsedate_tz(
                     email_server_date_as_unix))
+        else:
+            received = int(time.time())
 
         return email_server_date_as_unix
 
@@ -152,6 +155,7 @@ class ImapConnection(object):
                     if email_server_date_as_unix < time_cleanup and email_customtag == 'Email-Check-Icinga':
                         self.imapcon.store(message_id, '+FLAGS', '\\Deleted')
 
+                email_subject = email_subject or ''
                 if self.mailsubject in email_subject:
                     email_server_date_as_unix = self.parse_received(raw_email['Received'])
 
@@ -163,7 +167,7 @@ class ImapConnection(object):
             if time.time() > time_crit:
                 return STATUS_CRITICAL, None
             else:
-                time.sleep(5)
+                time.sleep(2)
 
     def cleanup(self, reply_name, cleanup_time):
         self.imapcon.select(self.mailbox)
@@ -449,13 +453,23 @@ def main():
             # TODO: Refactor
             if (state_received[0] == STATUS_CRITICAL):
                 plugin_exit('Email cloud not be fetched', STATUS_CRITICAL)
-            elif (state_received[0] == STATUS_WARNING):
-                time_delta_received = state_received[1] - time_send
-                pluginoutput = '%s took %ds to receive mail' % (conn_remote_imap.host, time_delta_received)
-                state_remote_imap = STATUS_WARNING
-            elif (state_received[0] == STATUS_OK):
-                time_delta_received = state_received[1] - time_send
-                state_remote_imap = STATUS_OK
+            else:
+                dts = state_received[1]
+                try:
+                    dts = int(dts)
+                except ValueError:
+                    dts = dts.strip()
+                    try:
+                        int(dts)
+                    except ValueError:
+                        dts = time_send
+                        # convert string to time/ts
+                time_delta_received = dts - time_send
+                if (state_received[0] == STATUS_WARNING):
+                    pluginoutput = '%s took %ds to receive mail' % (conn_remote_imap.host, time_delta_received)
+                    state_remote_imap = STATUS_WARNING
+                elif (state_received[0] == STATUS_OK):
+                    state_remote_imap = STATUS_OK
 
             if parsed.echo_reply is False:
                 pluginoutput += "%s - Email received in %ds" % (conn_remote_imap.host, time_delta_received)
@@ -542,5 +556,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
+        trace = traceback.format_exc()
         print("UNKNOWN: Python error: %s" % e.message)
+        print(trace)
         sys.exit(3)
