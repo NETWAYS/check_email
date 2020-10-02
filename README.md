@@ -1,3 +1,4 @@
+[ Please note: This is a fork of NETWAYS/check_email ]
 # WIP - Use with caution. You can delete your mails!
 
 # check_email
