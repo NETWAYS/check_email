@@ -147,6 +147,10 @@ class ImapConnection(object):
                 email_subject = raw_email.get('Subject')
                 email_customtag = raw_email.get('X-Custom-Tag')
 
+                # Skip messages without Received-Header
+                if raw_email['Received'] is None:
+                    continue
+
                 if self.clean:
                     email_server_date_as_unix = self.parse_received(raw_email['Received'])
 
