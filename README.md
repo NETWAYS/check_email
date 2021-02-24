@@ -101,7 +101,7 @@ Check_email can gather these following environment variables from the system:
 
 >NOTE: It's currently not implemented to define more than one of each *SMTP*, *IMAP* and *IMAP_SENDER*
 
-## Example - Send an email and check for its delivery (without cleanup)
+## Example - Send an email and check for its delivery (without cleanup).
 
 	./check_mail.py \
 			--smtp-host='mail.example.com' \
@@ -116,11 +116,13 @@ Check_email can gather these following environment variables from the system:
 			--receiver='receiver@example.de' \
 			--imap-mailbox='Monitoring' \
 			--warning=300 \
-			--critical=500
+			--critical=500 \
+            (optional) --subject='exampleSubject'
 
 >1. The plugin connects to *mail<span>.example.com*, creates an unique hash subject and sends an email
 >to *receiver<span>@example.com*
->2. The plugin connects to *imap<span>.example.com*, searches trough the mailbox *Monitoring*
+>2. The plugin connects to *imap<span>.example.com*, searches trough the mailbox *Monitoring*. If '--subject' is set,
+> the email will be checked and instantly deleted.
 >3. If the email cannot be found within 300 seconds, the return state will be WARNING
 >4. After 500 seconds, the plugin will exit and return a CRITICAL
 

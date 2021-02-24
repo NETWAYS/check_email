@@ -20,7 +20,11 @@ class ImapTest(unittest.TestCase):
                               "mailbox",
                               "subject",
                               "cleanup")
-        actual = imap.parse_received("test")
 
+        actual = imap.parse_received("test")
         expected = int(time.time())
+        self.assertEqual(actual, expected)
+
+        actual = imap.parse_received("; Wed, 1 Jan 1986 01:01:01 -0100")
+        expected = int(504928861)
         self.assertEqual(actual, expected)

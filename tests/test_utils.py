@@ -25,7 +25,7 @@ class UtilTest(unittest.TestCase):
             plugin_exit("CRITICAl", 2)
         self.assertEqual(actual.exception.code, 2)
 
-    def test_parse_arguments(self):
+    def test_parse_arguments_default(self):
         args = [
             '--reply-name',
             'foo',
@@ -50,3 +50,33 @@ class UtilTest(unittest.TestCase):
         actual = parse_arguments(args)
         self.assertEqual(actual.sender, 'foo')
         self.assertNotEqual(actual.receiver, 'bar')
+        # Check for Default subject
+        self.assertTrue('check_email' in actual.subject)
+
+
+    def test_parse_arguments_subject(self):
+        args = [
+            '--subject',
+            'foobarforunittest',
+            '--reply-name',
+            'foo',
+            '--smtp-host',
+            'foo',
+            '--smtp-user',
+            'foo',
+            '--smtp-password',
+            'foo',
+            '--imap-host',
+            'foo',
+            '--imap-user',
+            'foo',
+            '--imap-password',
+            'foo',
+            '--sender',
+            'foo',
+            '--receiver',
+            'foo'
+        ]
+
+        actual = parse_arguments(args)
+        self.assertEqual(actual.subject, 'foobarforunittest')
