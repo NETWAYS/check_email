@@ -126,7 +126,7 @@ class ImapConnection():
                 email.utils.parsedate_tz(
                     email_server_date_as_unix))
         else:
-            received = int(time.time())
+            email_server_date_as_unix = int(time.time())
 
         return email_server_date_as_unix
 
@@ -138,10 +138,10 @@ class ImapConnection():
 
         while True:
             self.imapcon.select(self.mailbox)
-            return_value, message_data = self.imapcon.search(None, 'ALL')
+            _, message_data = self.imapcon.search(None, 'ALL')
 
             for message_id in message_data[0].split():
-                return_value, message_data = self.imapcon.fetch(
+                _, message_data = self.imapcon.fetch(
                     message_id, '(RFC822)')
                 raw_email = email.message_from_string(message_data[0][1])  # type: email.message.Message
 
@@ -176,10 +176,10 @@ class ImapConnection():
         self.imapcon.select(self.mailbox)
         time_cleanup = time.time() - cleanup_time
 
-        return_value, message_data = self.imapcon.search(None, 'ALL')
+        _, message_data = self.imapcon.search(None, 'ALL')
 
         for message_id in message_data[0].split():
-            return_value, message_data = self.imapcon.fetch(
+            _, message_data = self.imapcon.fetch(
                 message_id, '(RFC822)')
             raw_email = email.message_from_string(message_data[0][1])
             email_server_date_as_unix = self.parse_received(raw_email['Received'])
@@ -423,7 +423,7 @@ def main():
     except smtplib.SMTPAuthenticationError as a:
         plugin_exit('SMTP Authentication Error: %s' % a,
                     STATUS_UNKNOWN)
-    except gaierror as g:
+    except gaierror:
         plugin_exit('SMTP Host "%s" not reachable' % conn_smtp.host,
                     STATUS_UNKNOWN)
     except smtplib.SMTPSenderRefused:
