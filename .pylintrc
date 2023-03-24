@@ -1,0 +1,17 @@
+# pylint config
+[MASTER]
+ignore-patterns=^test.*
+
+[FORMAT]
+good-names=a,g
+
+[MESSAGES CONTROL]
+disable=fixme,
+        line-too-long,
+        missing-class-docstring,
+        missing-function-docstring,
+        missing-module-docstring,
+        too-many-arguments,
+        too-many-instance-attributes,
+        too-many-branches,
+        too-many-statements
