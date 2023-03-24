@@ -18,9 +18,11 @@ try:
 
     from email.mime.text import MIMEText
     from socket import gaierror
+# pylint: disable=broad-exception-caught
 except Exception as e:
-    print("UNKNOWN: Failure during import: %s" % e.message)
-    sys.exit(3)
+    print(f"UNKNOWN: Failure during import. {e}")
+    # pylint: disable=consider-using-sys-exit
+    exit(3)
 
 __version__ = '0.1.0'
 
@@ -62,7 +64,7 @@ def plugin_exit(label, state=STATUS_UNKNOWN, lines=None, perfdata=None, name='ch
     sys.exit(state)
 
 
-class ImapConnection(object):
+class ImapConnection():
     def __init__(self, host, port, user, password,
                  mailbox, mailsubject, clean, mode=None):
         self.host = host
@@ -166,8 +168,9 @@ class ImapConnection(object):
 
             if time.time() > time_crit:
                 return STATUS_CRITICAL, None
-            else:
-                time.sleep(2)
+
+            time.sleep(2)
+
 
     def cleanup(self, reply_name, cleanup_time):
         self.imapcon.select(self.mailbox)
@@ -185,7 +188,7 @@ class ImapConnection(object):
                 self.imapcon.store(message_id, '+FLAGS', '\\Deleted')
 
 
-class SmtpConnection(object):
+class SmtpConnection():
     def __init__(self, host, port, user, password, sender, receiver, mode=None):
         self.host = host
         self.port = port if port else PORT_SMTPS
@@ -415,10 +418,10 @@ def main():
         conn_smtp.disconnect()
 
     except smtplib.SMTPConnectError as err:
-        plugin_exit('SMTP Connection Error: %s' % err[1],
+        plugin_exit('SMTP Connection Error: %s' % err,
                     STATUS_UNKNOWN)
     except smtplib.SMTPAuthenticationError as a:
-        plugin_exit('SMTP Authentication Error: %s' % a[1],
+        plugin_exit('SMTP Authentication Error: %s' % a,
                     STATUS_UNKNOWN)
     except gaierror as g:
         plugin_exit('SMTP Host "%s" not reachable' % conn_smtp.host,
@@ -451,7 +454,7 @@ def main():
                                                           parsed.cleanup_time)
 
             # TODO: Refactor
-            if (state_received[0] == STATUS_CRITICAL):
+            if state_received[0] == STATUS_CRITICAL:
                 plugin_exit('Email cloud not be fetched', STATUS_CRITICAL)
             else:
                 dts = state_received[1]
@@ -465,10 +468,10 @@ def main():
                         dts = time_send
                         # convert string to time/ts
                 time_delta_received = dts - time_send
-                if (state_received[0] == STATUS_WARNING):
+                if state_received[0] == STATUS_WARNING:
                     pluginoutput = '%s took %ds to receive mail' % (conn_remote_imap.host, time_delta_received)
                     state_remote_imap = STATUS_WARNING
-                elif (state_received[0] == STATUS_OK):
+                elif state_received[0] == STATUS_OK:
                     state_remote_imap = STATUS_OK
 
             if parsed.echo_reply is False:
@@ -507,15 +510,15 @@ def main():
                                                                parsed.cleanup_time)
 
                     # TODO: Refactor
-                    if (state_reply[0] == STATUS_CRITICAL):
+                    if state_reply[0] == STATUS_CRITICAL:
                         plugin_exit('Reply email cloud not be fetched',
                                     STATUS_CRITICAL)
-                    elif (state_reply[0] == STATUS_WARNING):
+                    elif state_reply[0] == STATUS_WARNING:
                         time_delta_reply = state_reply[1] - state_received[1]
                         time_delta_loop = time_delta_received + time_delta_reply
                         pluginoutput = '%s took %ds to reply' % (conn_remote_imap.host, time_delta_reply)
                         state_reply_imap = STATUS_WARNING
-                    elif (state_reply[0] == STATUS_OK):
+                    elif state_reply[0] == STATUS_OK:
                         time_delta_reply = state_reply[1] - state_received[1]
                         time_delta_loop = time_delta_received + time_delta_reply
                         state_reply_imap = STATUS_OK
@@ -555,8 +558,9 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+    # pylint: disable=broad-exception-caught
     except Exception as e:
-        trace = traceback.format_exc()
+        TRACE = traceback.format_exc()
         print("UNKNOWN: Python error: %s" % e.message)
-        print(trace)
+        print(TRACE)
         sys.exit(3)

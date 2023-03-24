@@ -7,10 +7,12 @@ good-names=a,g
 
 [MESSAGES CONTROL]
 disable=fixme,
+        consider-using-f-string,
         line-too-long,
         missing-class-docstring,
         missing-function-docstring,
         missing-module-docstring,
+        too-many-locals,
         too-many-arguments,
         too-many-instance-attributes,
         too-many-branches,
