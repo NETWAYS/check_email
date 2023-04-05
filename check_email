@@ -238,8 +238,8 @@ class SmtpConnection():
         self.smtpcon = None
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser()
+def parse_arguments(arguments):
+    parser = argparse.ArgumentParser(description="A monitoring plugin to monitor email transmissions")
 
     parser.add_argument('-V', '--version',
                         action='version',
@@ -370,7 +370,7 @@ def parse_arguments():
     cleanup_group.add_argument('--reply-name',
                                help='Specifies the name the of the echo reply, e.g. "My Echo"')
 
-    args = parser.parse_args()
+    args = parser.parse_args(arguments)
 
     # Get default values from parser if ENV is not set.
     # User and password has to be set, otherwise the default
@@ -392,12 +392,7 @@ def parse_arguments():
     return args
 
 
-def main():
-    try:
-        parsed = parse_arguments()
-    except argparse.ArgumentError as err:
-        plugin_exit('Error in arguments: %s' % err, STATUS_UNKNOWN)
-
+def main(args):
     state_remote_imap = STATUS_UNKNOWN
     state_reply_imap = STATUS_UNKNOWN
     pluginoutput = ''
@@ -406,19 +401,19 @@ def main():
     # If exception is thrown, the program exits with return code
     # Send mail
     try:
-        conn_smtp = SmtpConnection(parsed.smtp_host,
-                                   parsed.smtp_port,
-                                   parsed.smtp_user,
-                                   parsed.smtp_password,
-                                   parsed.sender,
-                                   parsed.receiver)
+        conn_smtp = SmtpConnection(args.smtp_host,
+                                   args.smtp_port,
+                                   args.smtp_user,
+                                   args.smtp_password,
+                                   args.sender,
+                                   args.receiver)
         subject = conn_smtp.subject
         conn_smtp.connect()
         time_send = conn_smtp.send()
         conn_smtp.disconnect()
 
-    except smtplib.SMTPConnectError as err:
-        plugin_exit('SMTP Connection Error: %s' % err,
+    except smtplib.SMTPConnectError as con_error:
+        plugin_exit('SMTP Connection Error: %s' % con_error,
                     STATUS_UNKNOWN)
     except smtplib.SMTPAuthenticationError as a:
         plugin_exit('SMTP Authentication Error: %s' % a,
@@ -439,19 +434,19 @@ def main():
     else:
         # Search email on remote IMAP
         try:
-            conn_remote_imap = ImapConnection(parsed.imap_host,
-                                              parsed.imap_port,
-                                              parsed.imap_user,
-                                              parsed.imap_password,
-                                              parsed.imap_mailbox,
+            conn_remote_imap = ImapConnection(args.imap_host,
+                                              args.imap_port,
+                                              args.imap_user,
+                                              args.imap_password,
+                                              args.imap_mailbox,
                                               subject,
-                                              parsed.cleanup)
+                                              args.cleanup)
             conn_remote_imap.connect()
 
             # search_mail returns [state, unix timestamp]
-            state_received = conn_remote_imap.search_mail(parsed.warning,
-                                                          parsed.critical,
-                                                          parsed.cleanup_time)
+            state_received = conn_remote_imap.search_mail(args.warning,
+                                                          args.critical,
+                                                          args.cleanup_time)
 
             # TODO: Refactor
             if state_received[0] == STATUS_CRITICAL:
@@ -474,7 +469,7 @@ def main():
                 elif state_received[0] == STATUS_OK:
                     state_remote_imap = STATUS_OK
 
-            if parsed.echo_reply is False:
+            if args.echo_reply is False:
                 pluginoutput += "%s - Email received in %ds" % (conn_remote_imap.host, time_delta_received)
                 perfdata = {
                     'receive': time_delta_received
@@ -482,8 +477,8 @@ def main():
 
             conn_remote_imap.disconnect_imap()
 
-        except imaplib.IMAP4.error as err:
-            plugin_exit('IMAP: %s' % err,
+        except imaplib.IMAP4.error as imap_err:
+            plugin_exit('IMAP: %s' % imap_err,
                         STATUS_UNKNOWN)
         except gaierror as g:
             plugin_exit('IMAP Host "%s" not reachable: %s' % (conn_remote_imap.host, g),
@@ -493,21 +488,21 @@ def main():
                         STATUS_UNKNOWN)
 
         else:
-            if parsed.echo_reply:
+            if args.echo_reply:
                 # Search echo replys
                 try:
-                    conn_sender_imap = ImapConnection(parsed.imap_sender_host,
-                                                      parsed.imap_sender_port,
-                                                      parsed.imap_sender_user,
-                                                      parsed.imap_sender_password,
-                                                      parsed.imap_sender_mailbox,
+                    conn_sender_imap = ImapConnection(args.imap_sender_host,
+                                                      args.imap_sender_port,
+                                                      args.imap_sender_user,
+                                                      args.imap_sender_password,
+                                                      args.imap_sender_mailbox,
                                                       subject,
-                                                      parsed.cleanup)
+                                                      args.cleanup)
                     conn_sender_imap.connect()
 
-                    state_reply = conn_sender_imap.search_mail(parsed.warning_reply,
-                                                               parsed.critical_reply,
-                                                               parsed.cleanup_time)
+                    state_reply = conn_sender_imap.search_mail(args.warning_reply,
+                                                               args.critical_reply,
+                                                               args.cleanup_time)
 
                     # TODO: Refactor
                     if state_reply[0] == STATUS_CRITICAL:
@@ -531,8 +526,8 @@ def main():
                         'loop': time_delta_loop
                     }
 
-                    if parsed.cleanup:
-                        conn_sender_imap.cleanup(parsed.reply_name, parsed.cleanup_time)
+                    if args.cleanup:
+                        conn_sender_imap.cleanup(args.reply_name, args.cleanup_time)
 
                     conn_sender_imap.disconnect_imap()
 
@@ -556,8 +551,15 @@ def main():
 
 
 if __name__ == '__main__':
+    # Parse CLI Arguments
     try:
-        main()
+        ARGS = parse_arguments(sys.argv[1:])
+    except argparse.ArgumentError as arg_err:
+        plugin_exit('Error in arguments: %s' % arg_err, STATUS_UNKNOWN)
+
+    # Run Main
+    try:
+        main(ARGS)
     # pylint: disable=broad-exception-caught
     except Exception as e:
         TRACE = traceback.format_exc()
