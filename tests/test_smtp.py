@@ -21,5 +21,24 @@ class SmtpTest(unittest.TestCase):
                               "receiver")
 
         smtp.smtpcon = mock.MagicMock()
+        self.assertIsNotNone(smtp.smtpcon)
 
         smtp.disconnect()
+        self.assertIsNone(smtp.smtpcon)
+
+    def test_send(self):
+
+        smtp = SmtpConnection("localhost",
+                              "1234",
+                              "username",
+                              "password",
+                              "sender",
+                              "receiver")
+
+        smtp.smtpcon = mock.MagicMock()
+        smtp.send()
+
+        expected = ('sender', 'receiver', 'Content-Type: text/plain; charset="us-ascii"\nMIME-Version: 1.0\nContent-Transfer-Encoding: 7bit\nFrom: sender\nTo: receiver\nSubject: ZYvO3a\nX-Custom-Tag: Email-Check-Icinga\n\nThis email is for monitoring.\nDo not reply.')
+        actual = smtp.smtpcon.sendmail.call_args.args
+
+        self.assertTrue('This email is for monitoring' in actual[2])
