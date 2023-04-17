@@ -4,9 +4,8 @@ try:
     import sys
     import smtplib
     import imaplib
-    import random
-    import string
     import time
+    import datetime
     import argparse
     import os
     import email.utils
@@ -117,8 +116,8 @@ class ImapConnection():
     # TODO: regex is very expensive
     # search an alternative solution
     def parse_received(raw_email_received):
-        email_server_date_as_unix = raw_email_received.splitlines()[-1].strip()
-        match = re.search("(.*.... ..:..:.. [+-]....).*", email_server_date_as_unix)
+        email_server_date_as_unix = raw_email_received
+        match = re.search(r";\s(.*)", email_server_date_as_unix)
 
         if match:
             email_server_date_as_unix = match.group(1)
@@ -130,7 +129,7 @@ class ImapConnection():
 
         return email_server_date_as_unix
 
-    def search_mail(self, warning, critical, cleanup_time):
+    def search_mail(self, warning, critical, cleanup_time, subject):
         # time_crit defines the critical threshold
         time_crit = time.time() + critical
         # time_warn defines the warning threshold
@@ -164,6 +163,9 @@ class ImapConnection():
                     if time.time() > time_warn:
                         return STATUS_WARNING, email_server_date_as_unix
 
+                    if subject:
+                        self.imapcon.store(message_id, '+FLAGS', '\\Deleted')
+
                     return STATUS_OK, email_server_date_as_unix
 
             if time.time() > time_crit:
@@ -189,16 +191,14 @@ class ImapConnection():
 
 
 class SmtpConnection():
-    def __init__(self, host, port, user, password, sender, receiver, mode=None):
+    def __init__(self, host, port, user, password, sender, receiver, subject='check_email', mode=None):
         self.host = host
         self.port = port if port else PORT_SMTPS
         self.user = user
         self.password = password
         self.sender = sender
         self.receiver = receiver
-        self.subject = ''.join(random.choice(string.ascii_uppercase +
-                                             string.ascii_lowercase +
-                                             string.digits) for _ in range(6))
+        self.subject = subject
 
         if mode:
             self.mode = mode
@@ -304,6 +304,10 @@ def parse_arguments(arguments):
                         help='Receiver email e.g. "receiver@mail.com"',
                         required=True)
 
+    parser.add_argument('--subject',
+                        help='Subject of the email message. (default: check_email and the current timestamp)',
+                        required=False)
+
     parser.add_argument('--warning', '-w',
                         help='value of warning threshold in seconds (default: 300)',
                         type=int,
@@ -370,6 +374,10 @@ def parse_arguments(arguments):
     cleanup_group.add_argument('--reply-name',
                                help='Specifies the name the of the echo reply, e.g. "My Echo"')
 
+    # Uses the current datetime in the subject to
+    # provide a unique but unterstandable identifier
+    parser.set_defaults(subject='check_email' + datetime.datetime.now().strftime("%d %b %Y %H:%M:%S"))
+
     args = parser.parse_args(arguments)
 
     # Get default values from parser if ENV is not set.
@@ -406,8 +414,9 @@ def main(args):
                                    args.smtp_user,
                                    args.smtp_password,
                                    args.sender,
-                                   args.receiver)
-        subject = conn_smtp.subject
+                                   args.receiver,
+                                   args.subject)
+
         conn_smtp.connect()
         time_send = conn_smtp.send()
         conn_smtp.disconnect()
@@ -439,14 +448,15 @@ def main(args):
                                               args.imap_user,
                                               args.imap_password,
                                               args.imap_mailbox,
-                                              subject,
+                                              args.subject,
                                               args.cleanup)
             conn_remote_imap.connect()
 
             # search_mail returns [state, unix timestamp]
             state_received = conn_remote_imap.search_mail(args.warning,
                                                           args.critical,
-                                                          args.cleanup_time)
+                                                          args.cleanup_time,
+                                                          args.subject)
 
             # TODO: Refactor
             if state_received[0] == STATUS_CRITICAL:
@@ -496,13 +506,14 @@ def main(args):
                                                       args.imap_sender_user,
                                                       args.imap_sender_password,
                                                       args.imap_sender_mailbox,
-                                                      subject,
+                                                      args.subject,
                                                       args.cleanup)
                     conn_sender_imap.connect()
 
                     state_reply = conn_sender_imap.search_mail(args.warning_reply,
                                                                args.critical_reply,
-                                                               args.cleanup_time)
+                                                               args.cleanup_time,
+                                                               args.subject)
 
                     # TODO: Refactor
                     if state_reply[0] == STATUS_CRITICAL:
