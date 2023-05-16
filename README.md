@@ -1,4 +1,4 @@
-# WIP - Use with caution. You can delete your mails!
+**Warning:** This is an experimental Proof of Concept. Use with caution. You can delete your mails!
 
 # check_email
 
